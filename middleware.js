@@ -14,33 +14,6 @@
 
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
-import { rateLimit } from '@/lib/rate-limit'
-
-// ─── Configurações de Rate Limiting por grupo de rota ────────────────────────
-
-const RATE_CONFIGS = {
-  // Auth: login brute-force é o ataque mais comum
-  auth: { limit: 10, windowMs: 60_000 },       // 10 req/min por IP
-  // Server Actions (mutations): proteção geral
-  actions: { limit: 30, windowMs: 60_000 },    // 30 req/min por IP
-  // Store público: cardápio + pedidos (mais permissivo)
-  public: { limit: 120, windowMs: 60_000 },    // 120 req/min por IP
-  // Default: rota não categorizada
-  default: { limit: 60, windowMs: 60_000 },    // 60 req/min por IP
-}
-
-function getRateConfig(pathname) {
-  if (pathname.startsWith('/admin/login') || pathname.startsWith('/admin/logout')) {
-    return RATE_CONFIGS.auth
-  }
-  if (pathname.startsWith('/api/') || pathname.includes('/_action')) {
-    return RATE_CONFIGS.actions
-  }
-  if (pathname.match(/^\/[^/]+$/) || pathname.startsWith('/entregador/')) {
-    return RATE_CONFIGS.public
-  }
-  return RATE_CONFIGS.default
-}
 
 // ─── Security Headers ─────────────────────────────────────────────────────────
 
@@ -133,9 +106,6 @@ function secureCookieOptions(options) {
 
 export async function middleware(request) {
   const { pathname }  = request.nextUrl
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-        ?? request.headers.get('x-real-ip')
-        ?? 'unknown'
 
   // ── 1. HTTPS Redirect (produção) ──────────────────────────────────────────
   if (
@@ -147,22 +117,7 @@ export async function middleware(request) {
     return NextResponse.redirect(httpsUrl, { status: 301 })
   }
 
-  // ── 2. Rate Limiting ──────────────────────────────────────────────────────
-  const rateCfg = getRateConfig(pathname)
-  const rlKey   = `${ip}:${pathname.split('/').slice(0, 3).join('/')}`
-  const { ok, retryAfter } = rateLimit(rlKey, rateCfg)
-
-  if (!ok) {
-    return new NextResponse('Too Many Requests', {
-      status: 429,
-      headers: {
-        'Retry-After': String(retryAfter ?? 60),
-        'Content-Type': 'text/plain',
-      },
-    })
-  }
-
-  // ── 3. Session Refresh (Supabase) ─────────────────────────────────────────
+  // ── 2. Session Refresh (Supabase) ─────────────────────────────────────────
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
