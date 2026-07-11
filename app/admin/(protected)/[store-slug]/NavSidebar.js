@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Pizza, LayoutDashboard, ClipboardList, FolderOpen, Bike, BarChart2, Users, Wallet, Settings, Globe, TrendingUp } from 'lucide-react'
+import { Pizza, LayoutDashboard, ClipboardList, FolderOpen, Bike, BarChart2, Users, Wallet, Settings, Globe, TrendingUp, ListChecks } from 'lucide-react'
 
-const ICONS = { LayoutDashboard, ClipboardList, Pizza, FolderOpen, Bike, BarChart2, Users, Wallet, Settings, Globe, TrendingUp }
+const ICONS = { LayoutDashboard, ClipboardList, Pizza, FolderOpen, Bike, BarChart2, Users, Wallet, Settings, Globe, TrendingUp, ListChecks }
 
 function isActive(pathname, item) {
   if (item.exact) return pathname === item.href

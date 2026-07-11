@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import ProductForm from '../../../ProductForm'
+import GruposDoProduto from '../../../GruposDoProduto'
 
 export default async function EditProductPage({ params }) {
   const { 'store-slug': storeSlug, 'product-id': productId } = await params
@@ -14,7 +15,7 @@ export default async function EditProductPage({ params }) {
 
   if (!store) redirect(`/admin/${storeSlug}`)
 
-  const [{ data: product }, { data: categories }] = await Promise.all([
+  const [{ data: product }, { data: categories }, { data: vinculos }, { data: grupos }] = await Promise.all([
     supabase
       .from('products')
       .select('id, nome, category_id, foto_url, ativo, product_variants(id, nome, preco, ordem, ativo)')
@@ -24,6 +25,17 @@ export default async function EditProductPage({ params }) {
     supabase
       .from('categories')
       .select('id, nome')
+      .eq('store_id', store.id)
+      .order('ordem', { ascending: true }),
+    supabase
+      .from('product_option_groups')
+      .select('id, group_id, min_selecao, max_selecao, ordem, option_groups(id, nome, tipo, option_items(id, ativo))')
+      .eq('product_id', productId)
+      .eq('store_id', store.id)
+      .order('ordem', { ascending: true }),
+    supabase
+      .from('option_groups')
+      .select('id, nome, tipo, ativo')
       .eq('store_id', store.id)
       .order('ordem', { ascending: true }),
   ])
@@ -51,6 +63,13 @@ export default async function EditProductPage({ params }) {
           storeSlug={storeSlug}
           product={product}
           variants={activeVariants}
+        />
+
+        <GruposDoProduto
+          productId={product.id}
+          storeSlug={storeSlug}
+          vinculos={vinculos ?? []}
+          gruposDisponiveis={grupos ?? []}
         />
       </main>
     </div>

@@ -26,6 +26,7 @@ export default async function StoreLayout({ children, params }) {
     { href: `/admin/${storeSlug}/pedidos`,                  iconName: 'ClipboardList',   label: 'Pedidos' },
     { href: `/admin/${storeSlug}/catalog`,                  iconName: 'Pizza',           label: 'Produtos' },
     { href: `/admin/${storeSlug}/catalog/categories`,       iconName: 'FolderOpen',      label: 'Categorias' },
+    { href: `/admin/${storeSlug}/catalog/opcoes`,           iconName: 'ListChecks',      label: 'Opções' },
     { href: `/admin/${storeSlug}/entregadores`,             iconName: 'Bike',            label: 'Entregadores' },
     { href: `/admin/${storeSlug}/entregadores/relatorio`,   iconName: 'BarChart2',       label: 'Rel. Entregas' },
     { href: `/admin/${storeSlug}/funcionarios`,             iconName: 'Users',           label: 'Funcionários' },
