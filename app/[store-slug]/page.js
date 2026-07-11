@@ -24,7 +24,17 @@ export default async function StorePage({ params }) {
       .order('ordem', { ascending: true }),
     supabase
       .from('products')
-      .select('id, nome, foto_url, category_id, ativo, product_variants(id, nome, preco, ordem, ativo)')
+      .select(`
+        id, nome, descricao, foto_url, category_id, ativo, preco,
+        product_variants(id, nome, preco, ordem, ativo),
+        product_option_groups(
+          min_selecao, max_selecao, ordem,
+          option_groups(
+            id, nome, tipo, ativo,
+            option_items(id, nome, descricao, preco_extra, ordem, ativo)
+          )
+        )
+      `)
       .eq('store_id', store.id)
       .eq('ativo', true)
       .order('nome', { ascending: true }),

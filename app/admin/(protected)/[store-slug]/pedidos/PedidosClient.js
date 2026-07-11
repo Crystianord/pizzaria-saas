@@ -6,6 +6,7 @@ import { updateOrderStatus } from '@/app/admin/_actions/orders'
 import Modal from '@/app/admin/_components/Modal'
 import { Bike, Store, Phone, MessageSquare, ClipboardList, Printer } from 'lucide-react'
 import { formatBR } from '@/lib/phone'
+import { descreveItem, linhasDeOpcoes } from '@/lib/order-display'
 
 const TABS = [
   { key: 'novo',       label: 'Em espera',  dot: 'bg-yellow-500' },
@@ -72,13 +73,18 @@ function ComandaPrint({ order, storeName }) {
             <div key={item.id} className="comanda-print-item">
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
                 <span style={{ flex: 1 }}>
-                  {item.eh_meia_meia && item.meia_meia_info
-                    ? `${item.quantidade}x [${item.meia_meia_info.metade_a}] / [${item.meia_meia_info.metade_b}] (${item.meia_meia_info.tamanho})`
-                    : `${item.quantidade}x ${item.nome_produto}${item.nome_variante ? ` (${item.nome_variante})` : ''}`
-                  }
+                  {`${item.quantidade}x ${descreveItem(item)}`}
                 </span>
                 <span style={{ flexShrink: 0 }}>{fmtSimple(item.subtotal)}</span>
               </div>
+
+              {/* Sabores e adicionais escolhidos — a cozinha precisa ver isto */}
+              {item.opcoes_info?.map(g => (
+                <div key={g.grupo} style={{ paddingLeft: '8px', fontSize: '10px' }}>
+                  {g.itens.map(o => o.nome).join(', ')}
+                </div>
+              ))}
+
               {item.observacoes && (
                 <div style={{ paddingLeft: '8px', fontSize: '10px' }}>   {item.observacoes}</div>
               )}
@@ -244,13 +250,15 @@ function OrderCard({ order, storeSlug, storeName, entregadores, onStatusChange, 
 
         <div className="space-y-1">
           {order.order_items?.map(item => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span className="text-gray-700">
-                {item.quantidade}× {item.nome_produto}
-                {item.nome_variante ? ` (${item.nome_variante})` : ''}
+            <div key={item.id} className="flex justify-between text-sm gap-2">
+              <span className="text-gray-700 min-w-0">
+                {item.quantidade}× {descreveItem(item)}
                 {item.eh_meia_meia ? ' ½' : ''}
+                {linhasDeOpcoes(item).map((linha, i) => (
+                  <span key={i} className="block text-xs text-gray-400 leading-snug">{linha}</span>
+                ))}
               </span>
-              <span className="text-gray-500">{fmt(item.subtotal)}</span>
+              <span className="text-gray-500 flex-shrink-0">{fmt(item.subtotal)}</span>
             </div>
           ))}
         </div>

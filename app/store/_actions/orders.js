@@ -22,33 +22,15 @@
 
 import { createServiceClient } from '@/lib/supabase-service'
 import { toE164 } from '@/lib/phone'
+import { buildOrderItems, toOrderItemRows, clamp, round2 } from '@/lib/order-items'
 
-// ─── Limites ───────────────────────────────────────────────────
-const MAX_NOME       = 100
-const MAX_TEL        = 20
-const MAX_ENDERECO   = 200
-const MAX_BAIRRO     = 60
-const MAX_OBS        = 500
-const MAX_ITEMS      = 30
-const MAX_QTD_ITEM   = 99
-const MAX_NOME_PROD  = 200
-const MAX_NOME_VAR   = 80
-
-// ─── Helpers ───────────────────────────────────────────────────
-function clamp(str, max) {
-  return (str || '').toString().trim().slice(0, max)
-}
-
-function precoComPromo(precoBase, promo) {
-  if (!promo) return precoBase
-  if (promo.tipo === 'pct')  return Math.max(0, precoBase * (1 - (promo.desconto_pct || 0) / 100))
-  if (promo.tipo === 'fixo') return Math.max(0, precoBase - (promo.desconto_fixo || 0))
-  return precoBase
-}
-
-function round2(n) {
-  return Math.round((Number(n) + Number.EPSILON) * 100) / 100
-}
+// ─── Limites dos campos do formulário ──────────────────────────
+// (os limites dos itens vivem em lib/order-items.js)
+const MAX_NOME     = 100
+const MAX_TEL      = 20
+const MAX_ENDERECO = 200
+const MAX_BAIRRO   = 60
+const MAX_OBS      = 500
 
 // ─── Action ────────────────────────────────────────────────────
 export async function createOrder(prevState, formData) {
@@ -100,136 +82,21 @@ export async function createOrder(prevState, formData) {
   } catch {
     return { error: 'Erro ao processar itens do pedido.' }
   }
-  if (!Array.isArray(items) || items.length === 0) return { error: 'Carrinho vazio.' }
-  if (items.length > MAX_ITEMS) return { error: 'Pedido muito grande (máx. 30 itens).' }
 
-  // ── 5. Coletar IDs únicos para batch lookup ────────────────
-  const variantIds = [...new Set(
-    items.filter(i => !i.ehMeiaMeia && i.variantId).map(i => i.variantId)
-  )]
-  const meiaProductIds = [...new Set(
-    items.flatMap(i => i.ehMeiaMeia
-      ? [i.meiaMetaInfo?.sabor1?.productId, i.meiaMetaInfo?.sabor2?.productId].filter(Boolean)
-      : []
-    )
-  )]
-  const allProductIds = new Set(meiaProductIds)
+  // ── 5. Validar itens e calcular preços (servidor é a fonte da verdade) ──
+  // Toda a lógica vive em lib/order-items.js, compartilhada com o pedido
+  // manual do admin — antes as duas estavam duplicadas e divergiam.
+  const { orderItems, error: itemsErr } = await buildOrderItems(supabase, storeId, items, store)
+  if (itemsErr) return { error: itemsErr }
 
-  // ── 6. Buscar variants do banco (preço oficial) ────────────
-  let variantsByid = new Map()
-  if (variantIds.length > 0) {
-    const { data: variants, error: vErr } = await supabase
-      .from('product_variants')
-      .select('id, product_id, nome, preco, ativo')
-      .in('id', variantIds)
-      .eq('store_id', storeId)
-      .eq('ativo', true)
-    if (vErr) return { error: 'Erro ao validar produtos.' }
-    variantsByid = new Map((variants || []).map(v => [v.id, v]))
-    for (const v of variants || []) allProductIds.add(v.product_id)
-  }
-
-  // ── 7. Buscar variants para meia-a-meia (por tamanho) ──────
-  // Resolve no servidor — não confia no client para preço/disponibilidade
-  let meiaVariantsByKey = new Map()  // key = `${product_id}|${nome}`
-  if (meiaProductIds.length > 0) {
-    const meiaTamanhos = [...new Set(
-      items.filter(i => i.ehMeiaMeia && i.nomeVariante).map(i => i.nomeVariante)
-    )]
-    if (meiaTamanhos.length > 0) {
-      const { data: meiaVariants, error: mErr } = await supabase
-        .from('product_variants')
-        .select('id, product_id, nome, preco, ativo')
-        .in('product_id', meiaProductIds)
-        .in('nome', meiaTamanhos)
-        .eq('store_id', storeId)
-        .eq('ativo', true)
-      if (mErr) return { error: 'Erro ao validar sabores de meia-a-meia.' }
-      meiaVariantsByKey = new Map(
-        (meiaVariants || []).map(v => [`${v.product_id}|${v.nome}`, v])
-      )
-    }
-  }
-
-  // ── 8. Buscar promoções ativas ─────────────────────────────
-  let promosByProductId = new Map()
-  if (allProductIds.size > 0) {
-    const { data: promos } = await supabase
-      .from('promotions')
-      .select('product_id, tipo, desconto_pct, desconto_fixo')
-      .eq('store_id', storeId)
-      .eq('ativo', true)
-      .in('product_id', [...allProductIds])
-    promosByProductId = new Map((promos || []).map(p => [p.product_id, p]))
-  }
-
-  // ── 9. Construir orderItems com preços do servidor ─────────
-  const orderItems = []
-
-  for (const item of items) {
-    const quantidade = Math.max(1, Math.min(Number(item.quantidade) || 1, MAX_QTD_ITEM))
-
-    if (item.ehMeiaMeia) {
-      if (!store.meia_a_meia_enabled) {
-        return { error: 'Meia-a-meia não está habilitado neste restaurante.' }
-      }
-      const meta = item.meiaMetaInfo
-      const tamanho = clamp(item.nomeVariante, MAX_NOME_VAR)
-      if (!meta?.sabor1?.productId || !meta?.sabor2?.productId || !tamanho) {
-        return { error: 'Meia-a-meia inválido.' }
-      }
-      const v1 = meiaVariantsByKey.get(`${meta.sabor1.productId}|${tamanho}`)
-      const v2 = meiaVariantsByKey.get(`${meta.sabor2.productId}|${tamanho}`)
-      if (!v1 || !v2) return { error: `Sabor indisponível no tamanho ${tamanho}.` }
-
-      const p1    = precoComPromo(Number(v1.preco), promosByProductId.get(v1.product_id))
-      const p2    = precoComPromo(Number(v2.preco), promosByProductId.get(v2.product_id))
-      const regra = store.meia_a_meia_rule || 'max'
-      const preco = round2(regra === 'avg' ? (p1 + p2) / 2 : Math.max(p1, p2))
-
-      orderItems.push({
-        productId:    null,
-        variantId:    null,
-        nomeProduto:  clamp(item.nomeProduto, MAX_NOME_PROD) || 'Meia a meia',
-        nomeVariante: tamanho,
-        preco,
-        quantidade,
-        ehMeiaMeia:   true,
-        meiaMetaInfo: {
-          sabor1: { productId: meta.sabor1.productId, nome: meta.sabor1.nome?.toString().slice(0, MAX_NOME_PROD), fotoUrl: meta.sabor1.fotoUrl?.toString().slice(0, 500) || null },
-          sabor2: { productId: meta.sabor2.productId, nome: meta.sabor2.nome?.toString().slice(0, MAX_NOME_PROD), fotoUrl: meta.sabor2.fotoUrl?.toString().slice(0, 500) || null },
-          regra,
-        },
-      })
-    } else {
-      const variant = variantsByid.get(item.variantId)
-      if (!variant) return { error: 'Produto indisponível ou inativo.' }
-
-      const preco = round2(
-        precoComPromo(Number(variant.preco), promosByProductId.get(variant.product_id))
-      )
-
-      orderItems.push({
-        productId:    variant.product_id,
-        variantId:    variant.id,
-        nomeProduto:  clamp(item.nomeProduto, MAX_NOME_PROD) || '',
-        nomeVariante: clamp(variant.nome, MAX_NOME_VAR),
-        preco,
-        quantidade,
-        ehMeiaMeia:   false,
-        meiaMetaInfo: null,
-      })
-    }
-  }
-
-  // ── 10. Totais (servidor é a fonte da verdade) ─────────────
+  // ── 6. Totais ──────────────────────────────────────────────
   const subtotal    = round2(orderItems.reduce((s, i) => s + i.preco * i.quantidade, 0))
   const taxaEntrega = tipoEntrega === 'entrega' ? round2(Number(store.taxa_entrega) || 0) : 0
   const total       = round2(subtotal + taxaEntrega)
 
   if (subtotal <= 0 || total <= 0) return { error: 'Pedido inválido.' }
 
-  // ── 11. Insert do pedido ───────────────────────────────────
+  // ── 7. Insert do pedido ────────────────────────────────────
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -253,22 +120,10 @@ export async function createOrder(prevState, formData) {
     return { error: 'Erro ao criar pedido. Tente novamente.' }
   }
 
-  // ── 12. Insert dos itens (rollback se falhar) ──────────────
-  const itemsToInsert = orderItems.map(i => ({
-    order_id:       order.id,
-    store_id:       storeId,
-    product_id:     i.productId,
-    variant_id:     i.variantId,
-    nome_produto:   i.nomeProduto,
-    nome_variante:  i.nomeVariante,
-    quantidade:     i.quantidade,
-    preco_unitario: i.preco,
-    eh_meia_meia:   i.ehMeiaMeia,
-    meia_meia_info: i.meiaMetaInfo,
-    subtotal:       round2(i.preco * i.quantidade),
-  }))
-
-  const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert)
+  // ── 8. Insert dos itens (rollback se falhar) ───────────────
+  const { error: itemsError } = await supabase
+    .from('order_items')
+    .insert(toOrderItemRows(orderItems, order.id, storeId))
   if (itemsError) {
     console.error('[createOrder] itemsError:', itemsError.code, itemsError.message)
     // Rollback manual: apaga o pedido órfão para não poluir a fila do admin

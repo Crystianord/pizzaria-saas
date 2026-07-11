@@ -3,6 +3,8 @@ import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { UtensilsCrossed } from 'lucide-react'
 import { createOrder } from '@/app/store/_actions/orders'
+import { precoComPromo, round2 } from '@/lib/order-items'
+import ProdutoModal from './ProdutoModal'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -13,12 +15,33 @@ function categoriaPermiteMeiaMeia(nomeCategoria) {
   return !PALAVRAS_SEM_MEIA.some(p => nome.includes(p))
 }
 
+function promoAtiva(product) {
+  return product.promotions?.find(p => p.ativo) ?? null
+}
+
+// Mesma fórmula do servidor (lib/order-items.js) — se divergirem, o preço muda
+// na frente do cliente no checkout.
 function precoFinal(variant, product) {
-  const promo = product.promotions?.find(p => p.ativo)
-  if (!promo) return variant.preco
-  if (promo.tipo === 'pct')  return Math.max(0, variant.preco * (1 - promo.desconto_pct / 100))
-  if (promo.tipo === 'fixo') return Math.max(0, variant.preco - promo.desconto_fixo)
-  return variant.preco
+  const base = variant ? Number(variant.preco) : Number(product.preco) || 0
+  return round2(precoComPromo(base, promoAtiva(product)))
+}
+
+/** Grupos de opção ativos do produto, já ordenados e com as opções dentro. */
+function gruposDoProduto(product) {
+  return (product.product_option_groups ?? [])
+    .filter(pog => pog.option_groups?.ativo)
+    .sort((a, b) => a.ordem - b.ordem)
+    .map(pog => ({
+      id:     pog.option_groups.id,
+      nome:   pog.option_groups.nome,
+      tipo:   pog.option_groups.tipo,
+      min:    pog.min_selecao,
+      max:    pog.max_selecao,
+      opcoes: (pog.option_groups.option_items ?? [])
+        .filter(o => o.ativo)
+        .sort((a, b) => a.ordem - b.ordem),
+    }))
+    .filter(g => g.opcoes.length > 0)
 }
 
 function calcMeiaPrice(p1, p2, variantNome, regra) {
@@ -60,18 +83,25 @@ function PromoTag({ product }) {
   )
 }
 
-function ProductCard({ product, onAdd, paleta, onMeiaClick, meiaEnabled, permiteMeiaMeia }) {
+function ProductCard({ product, onAdd, onConfigurar, paleta, onMeiaClick, meiaEnabled, permiteMeiaMeia }) {
   const activeVariants = product.product_variants
     ?.filter(v => v.ativo)
     .sort((a, b) => a.ordem - b.ordem) ?? []
 
   const [selected, setSelected] = useState(activeVariants[0]?.id ?? null)
-  const variant = activeVariants.find(v => v.id === selected) ?? activeVariants[0]
+  const variant = activeVariants.find(v => v.id === selected) ?? activeVariants[0] ?? null
 
-  if (!variant) return null
+  // Sem variante o preço é o do próprio produto (combos, bebidas). Antes o card
+  // simplesmente não renderizava, o que tornava impossível vender esses itens.
+  const temPreco = variant ? Number(variant.preco) > 0 : Number(product.preco) > 0
+  if (!temPreco) return null
 
-  const preco = precoFinal(variant, product)
-  const hasPromo = product.promotions?.some(p => p.ativo)
+  const grupos    = gruposDoProduto(product)
+  const configura = grupos.length > 0
+
+  const preco    = precoFinal(variant, product)
+  const precoBase = variant ? Number(variant.preco) : Number(product.preco)
+  const hasPromo = !!promoAtiva(product)
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
@@ -91,10 +121,14 @@ function ProductCard({ product, onAdd, paleta, onMeiaClick, meiaEnabled, permite
       </div>
 
       <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-2">{product.nome}</h3>
+        <h3 className="font-semibold text-gray-900 text-sm leading-snug">{product.nome}</h3>
+
+        {product.descricao && (
+          <p className="text-xs text-gray-400 leading-snug mt-1 mb-2 line-clamp-2">{product.descricao}</p>
+        )}
 
         {activeVariants.length > 1 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
+          <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
             {activeVariants.map(v => (
               <button
                 key={v.id}
@@ -111,22 +145,27 @@ function ProductCard({ product, onAdd, paleta, onMeiaClick, meiaEnabled, permite
           </div>
         )}
 
-        <div className="mt-auto">
+        <div className="mt-auto pt-3">
           <div className="flex items-center justify-between">
             <div>
-              {hasPromo && <p className="text-xs text-gray-400 line-through">{fmt(variant.preco)}</p>}
-              <p className="font-bold text-lg" style={{ color: paleta.primaria }}>{fmt(preco)}</p>
+              {hasPromo && <p className="text-xs text-gray-400 line-through">{fmt(precoBase)}</p>}
+              <p className="font-bold text-lg" style={{ color: paleta.primaria }}>
+                {configura && <span className="text-xs font-normal text-gray-400">a partir de </span>}
+                {fmt(preco)}
+              </p>
             </div>
             <button
-              onClick={() => onAdd({ product, variant, preco })}
+              onClick={() => configura
+                ? onConfigurar(product)
+                : onAdd({ product, variant, preco })}
               className="rounded-xl px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-95"
               style={{ backgroundColor: paleta.primaria }}
             >
-              + Adicionar
+              {configura ? 'Escolher' : '+ Adicionar'}
             </button>
           </div>
 
-          {meiaEnabled && permiteMeiaMeia && activeVariants.length > 0 && (
+          {meiaEnabled && permiteMeiaMeia && !configura && activeVariants.length > 0 && (
             <button
               onClick={() => onMeiaClick(product)}
               className="mt-2 w-full text-xs py-1.5 rounded-lg border transition-colors"
@@ -288,15 +327,17 @@ function CartDrawer({ items, store, paleta, onClose, onQty, onRemove }) {
 
     fd.set('store_id', store.id)
     fd.set('taxa_entrega', String(taxa))
+    // Só IDs e quantidades. Nome e preço o servidor reconstrói do banco —
+    // ver a invariante em lib/order-items.js.
     fd.set('items_json', JSON.stringify(items.map(i => ({
       productId:    i.productId,
       variantId:    i.variantId,
       nomeProduto:  i.nomeProduto,
       nomeVariante: i.nomeVariante,
-      preco:        i.preco,
       quantidade:   i.quantidade,
       ehMeiaMeia:   i.ehMeiaMeia,
       meiaMetaInfo: i.meiaMetaInfo,
+      opcoes:       i.opcoes,
     }))))
 
     const result = await createOrder(null, fd)
@@ -325,6 +366,13 @@ function CartDrawer({ items, store, paleta, onClose, onQty, onRemove }) {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-gray-900 leading-snug">{item.nomeProduto}</p>
                     {item.nomeVariante && <p className="text-xs text-gray-500">{item.nomeVariante}</p>}
+
+                    {item.opcoesResumo?.map(g => (
+                      <p key={g.grupo} className="text-xs text-gray-500 leading-snug">
+                        {g.itens.map(o => o.nome).join(', ')}
+                      </p>
+                    ))}
+
                     <p className="text-sm font-semibold mt-0.5" style={{ color: paleta.primaria }}>{fmt(item.preco)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -498,6 +546,7 @@ export default function MenuClient({ store, paleta, aberto, categories, products
   const [cart, setCart]             = useState([])
   const [cartOpen, setCartOpen]     = useState(false)
   const [meiaProduct, setMeiaProduct] = useState(null)
+  const [configProduct, setConfigProduct] = useState(null)
   const [activeCategory, setActiveCategory] = useState(null)
   const catRefs = useRef({})
 
@@ -514,30 +563,42 @@ export default function MenuClient({ store, paleta, aberto, categories, products
     return cat?.permiteMeiaMeia ?? true
   })
 
-  function addToCart({ product, variant, preco, nomeProduto, nomeVariante, variantId, productId, ehMeiaMeia, meiaMetaInfo }) {
-    const isFullItem = product !== undefined
-    const item = isFullItem
+  /**
+   * Aceita três formas de item:
+   *   1. Produto simples  → recebe { product, variant, preco }
+   *   2. Meia a meia      → recebe os campos já montados, com ehMeiaMeia
+   *   3. Produto com opções → recebe os campos já montados, com `opcoes`
+   *
+   * Antes isso era um ternário baseado em "o campo `product` veio?", o que não
+   * escala para um terceiro tipo.
+   */
+  function addToCart(payload) {
+    const item = payload.product
       ? {
-          id:          uid(),
-          productId:   product.id,
-          variantId:   variant.id,
-          nomeProduto: product.nome,
-          nomeVariante: variant.nome,
-          preco,
-          quantidade:  1,
-          ehMeiaMeia:  false,
+          id:           uid(),
+          productId:    payload.product.id,
+          variantId:    payload.variant?.id ?? null,
+          nomeProduto:  payload.product.nome,
+          nomeVariante: payload.variant?.nome ?? null,
+          preco:        payload.preco,
+          quantidade:   1,
+          ehMeiaMeia:   false,
           meiaMetaInfo: null,
+          opcoes:       null,
+          opcoesResumo: null,
         }
       : {
-          id:          uid(),
-          productId,
-          variantId,
-          nomeProduto,
-          nomeVariante,
-          preco,
-          quantidade:  1,
-          ehMeiaMeia:  true,
-          meiaMetaInfo,
+          id:           uid(),
+          productId:    payload.productId    ?? null,
+          variantId:    payload.variantId    ?? null,
+          nomeProduto:  payload.nomeProduto,
+          nomeVariante: payload.nomeVariante ?? null,
+          preco:        payload.preco,
+          quantidade:   payload.quantidade   ?? 1,
+          ehMeiaMeia:   payload.ehMeiaMeia   ?? false,
+          meiaMetaInfo: payload.meiaMetaInfo ?? null,
+          opcoes:       payload.opcoes       ?? null,
+          opcoesResumo: payload.opcoesResumo ?? null,
         }
 
     setCart(prev => [...prev, item])
@@ -612,6 +673,7 @@ export default function MenuClient({ store, paleta, aberto, categories, products
                     meiaEnabled={store.meia_a_meia_enabled}
                     permiteMeiaMeia={cat.permiteMeiaMeia}
                     onAdd={addToCart}
+                    onConfigurar={setConfigProduct}
                     onMeiaClick={setMeiaProduct}
                   />
                 ))}
@@ -654,6 +716,18 @@ export default function MenuClient({ store, paleta, aberto, categories, products
           paleta={paleta}
           onAdd={addToCart}
           onClose={() => setMeiaProduct(null)}
+        />
+      )}
+
+      {/* Configurador de opções e adicionais */}
+      {configProduct && (
+        <ProdutoModal
+          product={configProduct}
+          grupos={gruposDoProduto(configProduct)}
+          promo={promoAtiva(configProduct)}
+          paleta={paleta}
+          onAdd={addToCart}
+          onClose={() => setConfigProduct(null)}
         />
       )}
     </div>

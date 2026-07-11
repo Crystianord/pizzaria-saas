@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Link2, Copy, CheckCircle, ChefHat, Bike, PackageCheck, XCircle } from 'lucide-react'
+import { descreveItem, linhasDeOpcoes } from '@/lib/order-display'
 
 function LinkAcompanhamento({ paleta }) {
   const [copied, setCopied] = useState(false)
@@ -163,12 +164,14 @@ export default function OrderStatus({ initialOrder, paleta }) {
         <h2 className="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">Resumo</h2>
         <div className="space-y-2">
           {order.order_items?.map(item => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span className="text-gray-700">
-                {item.quantidade}× {item.nome_produto}
-                {item.nome_variante ? ` (${item.nome_variante})` : ''}
+            <div key={item.id} className="flex justify-between text-sm gap-2">
+              <span className="text-gray-700 min-w-0">
+                {item.quantidade}× {descreveItem(item)}
+                {linhasDeOpcoes(item).map((linha, i) => (
+                  <span key={i} className="block text-xs text-gray-400 leading-snug">{linha}</span>
+                ))}
               </span>
-              <span className="font-medium text-gray-900">{fmt(item.subtotal)}</span>
+              <span className="font-medium text-gray-900 flex-shrink-0">{fmt(item.subtotal)}</span>
             </div>
           ))}
         </div>

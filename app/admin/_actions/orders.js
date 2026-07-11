@@ -25,21 +25,18 @@ import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { toE164 } from '@/lib/phone'
+import { buildOrderItems, toOrderItemRows, clamp, round2 } from '@/lib/order-items'
 
 // Whitelist de status válidos — bloqueia qualquer string arbitrária vinda do cliente
 const VALID_STATUSES = ['novo', 'em_preparo', 'a_caminho', 'entregue', 'cancelado']
 
-// Mesmos limites do pedido público (app/store/_actions/orders.js). O admin é
-// confiável, mas o banco tem CHECK de tamanho — sem o clamp, um texto longo
-// derruba o insert com erro de constraint em vez de uma mensagem clara.
+// Limites dos campos do formulário. O admin é confiável, mas o banco tem CHECK
+// de tamanho — sem o clamp, um texto longo derruba o insert com erro de
+// constraint em vez de uma mensagem clara.
 const MAX_NOME     = 100
 const MAX_ENDERECO = 200
 const MAX_BAIRRO   = 60
 const MAX_OBS      = 500
-
-function clamp(str, max) {
-  return (str || '').toString().trim().slice(0, max)
-}
 
 /**
  * createOrderManual — Cria um pedido manualmente via painel admin.
@@ -101,35 +98,26 @@ export async function createOrderManual(prevState, formData) {
     return { error: 'Erro ao processar itens.' }
   }
 
-  if (!items?.length) return { error: 'Adicione ao menos um item.' }
+  // 4. Config da loja (regra da meia-a-meia)
+  const { data: store } = await supabase
+    .from('stores')
+    .select('id, meia_a_meia_enabled, meia_a_meia_rule')
+    .eq('id', storeId)
+    .single()
+  if (!store) return { error: 'Loja não encontrada.' }
 
-  // 4. Re-buscar preços oficiais no banco
-  //    O admin pode ter digitado um preço diferente no frontend — ignoramos isso.
-  //    Buscamos o preço real da tabela product_variants.
-  const variantIds = items.filter(i => i.variantId).map(i => i.variantId)
-  const priceMap = {}
-  if (variantIds.length > 0) {
-    const { data: dbVariants } = await supabase
-      .from('product_variants')
-      .select('id, preco')
-      .in('id', variantIds)
-      .eq('store_id', storeId)  // garante que a variante pertence a esta loja
-    for (const v of (dbVariants ?? [])) priceMap[v.id] = Number(v.preco)
-  }
+  // 5. Validar itens e calcular preços — mesma lógica do pedido do site.
+  //    Antes este caminho não aplicava promoção e, se a variante sumisse do
+  //    banco, caía no preço enviado pelo formulário.
+  const { orderItems, error: itemsErr } = await buildOrderItems(supabase, storeId, items, store)
+  if (itemsErr) return { error: itemsErr }
 
-  // 5. Substituir preços do cliente pelos preços do banco
-  //    Se a variante não foi encontrada no banco, o item.preco original é mantido
-  //    (cobre casos de itens sem variantId, como taxas avulsas)
-  const resolvedItems = items.map(item => ({
-    ...item,
-    preco: item.variantId != null && priceMap[item.variantId] != null
-      ? priceMap[item.variantId]
-      : Number(item.preco),
-  }))
+  // 6. Totais (servidor é a fonte da verdade)
+  const subtotal = round2(orderItems.reduce((s, i) => s + i.preco * i.quantidade, 0))
+  const taxa     = tipoEntrega === 'entrega' ? round2(taxaEntrega) : 0
+  const total    = round2(subtotal + taxa)
 
-  // 6. Calcular totais no servidor (nunca do cliente)
-  const subtotal = resolvedItems.reduce((s, i) => s + i.preco * i.quantidade, 0)
-  const total    = subtotal + (tipoEntrega === 'entrega' ? taxaEntrega : 0)
+  if (subtotal <= 0 || total <= 0) return { error: 'Pedido inválido.' }
 
   // 7. Inserir pedido principal
   const { data: order, error: oErr } = await supabase
@@ -142,7 +130,7 @@ export async function createOrderManual(prevState, formData) {
       tipo_entrega: tipoEntrega,
       endereco,
       bairro,
-      taxa_entrega: tipoEntrega === 'entrega' ? taxaEntrega : 0,
+      taxa_entrega: taxa,
       subtotal,
       total,
       observacoes,
@@ -152,22 +140,15 @@ export async function createOrderManual(prevState, formData) {
 
   if (oErr) return { error: 'Erro ao criar pedido.' }
 
-  // 8. Inserir itens do pedido (vinculados ao pedido criado acima)
-  const orderItems = resolvedItems.map(item => ({
-    order_id:       order.id,
-    store_id:       storeId,
-    product_id:     item.productId   ?? null,
-    variant_id:     item.variantId   ?? null,
-    nome_produto:   item.nomeProduto,
-    nome_variante:  item.nomeVariante ?? null,
-    quantidade:     item.quantidade,
-    preco_unitario: item.preco,
-    eh_meia_meia:   false,
-    subtotal:       item.preco * item.quantidade,
-  }))
+  // 8. Inserir itens (rollback se falhar — senão fica pedido órfão sem itens)
+  const { error: iErr } = await supabase
+    .from('order_items')
+    .insert(toOrderItemRows(orderItems, order.id, storeId))
 
-  const { error: iErr } = await supabase.from('order_items').insert(orderItems)
-  if (iErr) return { error: 'Pedido criado, mas falha ao salvar itens.' }
+  if (iErr) {
+    await supabase.from('orders').delete().eq('id', order.id)
+    return { error: 'Erro ao salvar itens do pedido.' }
+  }
 
   // 9. Invalidar cache do painel e redirecionar para a fila de pedidos
   revalidatePath(`/admin/${storeSlug}/pedidos`)

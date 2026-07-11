@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Bike, Phone } from 'lucide-react'
 import { toE164, formatBR } from '@/lib/phone'
+import { descreveItem, linhasDeOpcoes } from '@/lib/order-display'
 import { marcarEntregue } from '@/app/entregador/_actions/orders'
 
 function fmt(v) {
@@ -142,12 +143,14 @@ export default function EntregadorClient({ entregador, initialOrders, token }) {
                 <div className="space-y-1">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Itens do pedido</p>
                   {order.order_items?.map(item => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-gray-700">
-                        {item.quantidade}× {item.nome_produto}
-                        {item.nome_variante ? ` (${item.nome_variante})` : ''}
+                    <div key={item.id} className="flex justify-between text-sm gap-2">
+                      <span className="text-gray-700 min-w-0">
+                        {item.quantidade}× {descreveItem(item)}
+                        {linhasDeOpcoes(item).map((linha, i) => (
+                          <span key={i} className="block text-xs text-gray-400 leading-snug">{linha}</span>
+                        ))}
                       </span>
-                      <span className="text-gray-500 font-medium">{fmt(item.subtotal)}</span>
+                      <span className="text-gray-500 font-medium flex-shrink-0">{fmt(item.subtotal)}</span>
                     </div>
                   ))}
                 </div>
