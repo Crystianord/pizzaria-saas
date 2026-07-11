@@ -79,7 +79,7 @@ export default function LoginForm() {
             type="email"
             required
             autoComplete="email"
-            placeholder="admin@suapizzaria.com"
+            placeholder="admin@seurestaurante.com"
             className="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200 text-sm"
           />
         </div>

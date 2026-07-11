@@ -446,7 +446,7 @@ function Step4() {
     <form onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold text-gray-900 mb-1">Meia a meia</h2>
       <p className="text-gray-500 text-sm mb-6">
-        Sua pizzaria aceita pedidos de meia a meia?
+        Seu restaurante aceita pedidos de meia a meia?
       </p>
 
       <div className="space-y-3 mb-6">

@@ -21,7 +21,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import LoginForm from './LoginForm'
-import { Pizza } from 'lucide-react'
+import { UtensilsCrossed } from 'lucide-react'
 
 export default async function LoginPage() {
   const supabase = await createClient()
@@ -53,13 +53,13 @@ export default async function LoginPage() {
         {/* Logo / ícone */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30 mb-4">
-            <Pizza className="w-8 h-8 text-white" />
+            <UtensilsCrossed className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
             Painel Admin
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Acesse sua pizzaria
+            Acesse seu restaurante
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export default async function LoginPage() {
         </div>
 
         <p className="text-center text-slate-600 text-xs mt-6">
-          © {new Date().getFullYear()} Pizzaria SaaS
+          © {new Date().getFullYear()} Cardapp
         </p>
       </div>
     </main>

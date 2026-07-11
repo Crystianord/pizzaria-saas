@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { UtensilsCrossed } from 'lucide-react'
 import { createOrder } from '@/app/store/_actions/orders'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -83,7 +84,7 @@ function ProductCard({ product, onAdd, paleta, onMeiaClick, meiaEnabled, permite
           />
         ) : (
           <div className="w-full h-44 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-            <span className="text-5xl opacity-30">🍕</span>
+            <UtensilsCrossed className="w-12 h-12 text-gray-300" />
           </div>
         )}
         <PromoTag product={product} />
@@ -209,7 +210,7 @@ function MeiaModal({ products, regra, paleta, onAdd, onClose }) {
                 >
                   {p.foto_url
                     ? <img src={p.foto_url} alt={p.nome} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                    : <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-xl">🍕</div>
+                    : <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0"><UtensilsCrossed className="w-5 h-5 text-gray-300" /></div>
                   }
                   <span className="font-medium text-sm text-gray-800">{p.nome}</span>
                 </button>
@@ -229,7 +230,7 @@ function MeiaModal({ products, regra, paleta, onAdd, onClose }) {
                   >
                     {p.foto_url
                       ? <img src={p.foto_url} alt={p.nome} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                      : <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-xl">🍕</div>
+                      : <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0"><UtensilsCrossed className="w-5 h-5 text-gray-300" /></div>
                     }
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-gray-800">{p.nome}</p>
@@ -377,7 +378,7 @@ function CartDrawer({ items, store, paleta, onClose, onQty, onRemove }) {
                         ? { backgroundColor: paleta.primaria, borderColor: paleta.primaria, color: '#fff' }
                         : { borderColor: '#e5e7eb', color: '#6b7280' }}
                     >
-                      {t === 'entrega' ? '🛵 Entrega' : '🏪 Retirada'}
+                      {t === 'entrega' ? 'Entrega' : 'Retirada'}
                     </button>
                   ))}
                 </div>

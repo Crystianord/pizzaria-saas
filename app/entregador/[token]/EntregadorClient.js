@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { Bike, Phone } from 'lucide-react'
 import { marcarEntregue } from '@/app/entregador/_actions/orders'
 
 function fmt(v) {
@@ -87,7 +88,7 @@ export default function EntregadorClient({ entregador, initialOrders, token }) {
 
         {pendentes.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-6xl mb-4">🛵</p>
+            <Bike className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-base font-semibold text-gray-600">Nenhuma entrega ativa</p>
             <p className="text-sm text-gray-400 mt-1">Aguardando novos pedidos...</p>
           </div>
@@ -112,7 +113,7 @@ export default function EntregadorClient({ entregador, initialOrders, token }) {
 
                 {/* Endereço destacado */}
                 <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-1">
-                  <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">📍 Endereço de entrega</p>
+                  <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Endereço de entrega</p>
                   <p className="text-base font-semibold text-blue-900">{order.endereco}</p>
                   {order.bairro && <p className="text-sm text-blue-700 font-medium">{order.bairro}</p>}
                 </div>
@@ -123,7 +124,7 @@ export default function EntregadorClient({ entregador, initialOrders, token }) {
                     href={`tel:${order.cliente_tel}`}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                   >
-                    📞 Ligar
+                    <Phone className="w-4 h-4" /> Ligar
                   </a>
                   <a
                     href={`https://wa.me/55${order.cliente_tel.replace(/\D/g, '')}`}
@@ -152,7 +153,7 @@ export default function EntregadorClient({ entregador, initialOrders, token }) {
 
                 {order.observacoes && (
                   <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                    <p className="text-sm text-amber-800">📝 {order.observacoes}</p>
+                    <p className="text-sm text-amber-800">Obs.: {order.observacoes}</p>
                   </div>
                 )}
 

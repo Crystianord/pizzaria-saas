@@ -4,7 +4,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { motion } from 'framer-motion'
 import { updateOrderStatus } from '@/app/admin/_actions/orders'
 import Modal from '@/app/admin/_components/Modal'
-import { Bike, Store, Phone, MessageSquare, ClipboardList } from 'lucide-react'
+import { Bike, Store, Phone, MessageSquare, ClipboardList, Printer } from 'lucide-react'
 
 const TABS = [
   { key: 'novo',       label: 'Em espera',  dot: 'bg-yellow-500' },
@@ -294,7 +294,7 @@ function OrderCard({ order, storeSlug, storeName, entregadores, onStatusChange, 
             className="px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1"
             title="Imprimir comanda"
           >
-            🖨
+            <Printer className="w-4 h-4" />
           </button>
         </div>
 

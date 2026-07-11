@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { Link2, Copy, CheckCircle, ChefHat, Bike, PackageCheck, XCircle } from 'lucide-react'
 
 function LinkAcompanhamento({ paleta }) {
   const [copied, setCopied] = useState(false)
@@ -20,7 +21,7 @@ function LinkAcompanhamento({ paleta }) {
   return (
     <div className="bg-white rounded-2xl border-2 p-4 shadow-sm space-y-3" style={{ borderColor: paleta.primaria + '40' }}>
       <div className="flex items-center gap-2">
-        <span className="text-lg">🔗</span>
+        <Link2 className="w-4 h-4 text-gray-500" />
         <p className="text-sm font-bold text-gray-900">Seu link de acompanhamento</p>
       </div>
 
@@ -43,7 +44,7 @@ function LinkAcompanhamento({ paleta }) {
             : { borderColor: paleta.primaria, color: paleta.primaria }
           }
         >
-          {copied ? '✓ Copiado!' : '📋 Copiar link'}
+          {copied ? '✓ Copiado!' : (<><Copy className="w-4 h-4" /> Copiar link</>)}
         </button>
 
         <a
@@ -62,10 +63,10 @@ function LinkAcompanhamento({ paleta }) {
 }
 
 const STEPS = [
-  { key: 'novo',       label: 'Pedido recebido',    icon: '✅', desc: 'Aguardando confirmação da pizzaria' },
-  { key: 'em_preparo', label: 'Em preparo',          icon: '👨‍🍳', desc: 'A pizzaria está preparando seu pedido' },
-  { key: 'a_caminho',  label: 'A caminho',           icon: '🛵', desc: 'Seu pedido está a caminho' },
-  { key: 'entregue',   label: 'Entregue',            icon: '🎉', desc: 'Pedido entregue. Bom apetite!' },
+  { key: 'novo',       label: 'Pedido recebido',    Icon: CheckCircle,  desc: 'Aguardando confirmação do restaurante' },
+  { key: 'em_preparo', label: 'Em preparo',          Icon: ChefHat,      desc: 'O restaurante está preparando seu pedido' },
+  { key: 'a_caminho',  label: 'A caminho',           Icon: Bike,         desc: 'Seu pedido está a caminho' },
+  { key: 'entregue',   label: 'Entregue',            Icon: PackageCheck, desc: 'Pedido entregue. Bom apetite!' },
 ]
 
 const STATUS_ORDER = { novo: 0, em_preparo: 1, a_caminho: 2, entregue: 3, cancelado: -1 }
@@ -108,9 +109,9 @@ export default function OrderStatus({ initialOrder, paleta }) {
 
       {isCanceled ? (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-          <p className="text-3xl mb-2">❌</p>
+          <XCircle className="w-10 h-10 text-red-400 mx-auto mb-2" />
           <p className="font-bold text-red-700 text-lg">Pedido cancelado</p>
-          <p className="text-sm text-red-500 mt-1">Entre em contato com a pizzaria para mais informações.</p>
+          <p className="text-sm text-red-500 mt-1">Entre em contato com o restaurante para mais informações.</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -129,7 +130,15 @@ export default function OrderStatus({ initialOrder, paleta }) {
                         : { borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }
                     }
                   >
-                    {step.icon}
+                    <step.Icon
+                      className="w-5 h-5"
+                      style={current
+                        ? { color: paleta.primaria }
+                        : done
+                          ? { color: '#16a34a' }
+                          : { color: '#9ca3af' }
+                      }
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-semibold text-sm ${current ? '' : done ? 'text-green-700' : 'text-gray-400'}`}
@@ -178,8 +187,8 @@ export default function OrderStatus({ initialOrder, paleta }) {
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400 space-y-0.5">
-          <p>{order.tipo_entrega === 'entrega' ? `🛵 Entrega — ${order.endereco}, ${order.bairro}` : '🏪 Retirada no local'}</p>
-          {order.observacoes && <p>📝 {order.observacoes}</p>}
+          <p>{order.tipo_entrega === 'entrega' ? `Entrega — ${order.endereco}, ${order.bairro}` : 'Retirada no local'}</p>
+          {order.observacoes && <p>Obs.: {order.observacoes}</p>}
         </div>
       </div>
 

@@ -83,7 +83,7 @@ export async function createOrder(prevState, formData) {
       && Array.isArray(store.bairros_atendidos)
       && store.bairros_atendidos.length > 0
       && !store.bairros_atendidos.includes(bairro)) {
-    return { error: 'Bairro fora da área de entrega desta pizzaria.' }
+    return { error: 'Bairro fora da área de entrega deste restaurante.' }
   }
 
   // ── 4. Parsear items_json com guarda ───────────────────────
@@ -164,7 +164,7 @@ export async function createOrder(prevState, formData) {
 
     if (item.ehMeiaMeia) {
       if (!store.meia_a_meia_enabled) {
-        return { error: 'Meia-a-meia não está habilitado nesta pizzaria.' }
+        return { error: 'Meia-a-meia não está habilitado neste restaurante.' }
       }
       const meta = item.meiaMetaInfo
       const tamanho = clamp(item.nomeVariante, MAX_NOME_VAR)

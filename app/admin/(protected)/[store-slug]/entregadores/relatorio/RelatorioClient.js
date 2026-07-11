@@ -75,24 +75,24 @@ function DriverPayCard({ driver, entregador, dataSelecionada, onWhatsapp }) {
 
   function buildWhatsMsg() {
     let msg = `Olá ${driver.nome}! Resumo do turno de ${dataStr}:\n\n`
-    msg += `🛵 Entregas realizadas: ${driver.entregas}\n`
+    msg += `Entregas realizadas: ${driver.entregas}\n`
 
     if (driver.orderNums.length) {
       const nums = driver.orderNums.map(n => `#${n}`).join(', ')
-      msg += `📋 Pedidos: ${nums}\n`
+      msg += `Pedidos: ${nums}\n`
     }
 
     msg += `\n`
 
     if (modo === 'diaria' || modo === 'ambos') {
-      msg += `📅 Diária: ${fmt(diariaVal)}\n`
+      msg += `Diária: ${fmt(diariaVal)}\n`
     }
     if (modo === 'entrega' || modo === 'ambos') {
-      msg += `🛵 Entregas (${driver.entregas} × ${fmt(taxaVal)}): ${fmt(totalEntregas)}\n`
+      msg += `Entregas (${driver.entregas} × ${fmt(taxaVal)}): ${fmt(totalEntregas)}\n`
     }
 
-    msg += `\n💰 Total a receber: ${fmt(total)}\n`
-    msg += `\nObrigado pelo trabalho! 🍕`
+    msg += `\nTotal a receber: ${fmt(total)}\n`
+    msg += `\nObrigado pelo trabalho!`
     return encodeURIComponent(msg)
   }
 

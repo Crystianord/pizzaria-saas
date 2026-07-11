@@ -122,15 +122,15 @@ function FuncionarioPayCard({ funcionario, intercorrencias, inicio, fim }) {
 
   function buildWhatsMsg() {
     let msg = `Olá ${funcionario.nome}! Resumo do pagamento de ${fmtDate(inicio)} a ${fmtDate(fim)}:\n\n`
-    msg += `📅 ${dias} dia${dias !== 1 ? 's' : ''} × ${fmt(funcionario.valor_diaria)}/dia = ${fmt(bruto)}\n`
+    msg += `${dias} dia${dias !== 1 ? 's' : ''} × ${fmt(funcionario.valor_diaria)}/dia = ${fmt(bruto)}\n`
     if (localList.length > 0) {
-      msg += `\n⚠ Intercorrências:\n`
+      msg += `\nIntercorrências:\n`
       for (const i of localList) {
         const sinal = Number(i.ajuste) >= 0 ? '+' : ''
-        msg += `• ${fmtDate(i.data)} — ${i.descricao} (${sinal}${fmt(i.ajuste)})\n`
+        msg += `- ${fmtDate(i.data)} — ${i.descricao} (${sinal}${fmt(i.ajuste)})\n`
       }
     }
-    msg += `\n💰 Total a receber: ${fmt(total)}\n\nObrigado pelo trabalho! 🍕`
+    msg += `\nTotal a receber: ${fmt(total)}\n\nObrigado pelo trabalho!`
     return encodeURIComponent(msg)
   }
 

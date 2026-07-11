@@ -171,7 +171,7 @@ export default function SettingsForm({ store, storeSlug }) {
       {/* Horário de funcionamento */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-1">Horário de funcionamento</h2>
-        <p className="text-xs text-gray-400 mb-4">Marque os dias em que a pizzaria está aberta e defina o horário.</p>
+        <p className="text-xs text-gray-400 mb-4">Marque os dias em que o restaurante está aberto e defina o horário.</p>
 
         <div>
           {DIAS.map(dia => (
@@ -221,7 +221,7 @@ export default function SettingsForm({ store, storeSlug }) {
       {/* Paleta de cores */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-1">Paleta de cores</h2>
-        <p className="text-xs text-gray-400 mb-4">Define as cores do site público da sua pizzaria.</p>
+        <p className="text-xs text-gray-400 mb-4">Define as cores do site público do seu restaurante.</p>
         <input type="hidden" name="paleta_id" value={paleta} />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {PALETAS.map(p => (
@@ -242,7 +242,7 @@ export default function SettingsForm({ store, storeSlug }) {
       {/* Imagem de fundo */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-1">Imagem de fundo</h2>
-        <p className="text-xs text-gray-400 mb-4">Aparece no topo do site público da pizzaria. Recomendado: 1400×600px.</p>
+        <p className="text-xs text-gray-400 mb-4">Aparece no topo do site público do restaurante. Recomendado: 1400×600px.</p>
         <input type="hidden" name="imagem_fundo_url" value={bgUrl} />
         <div className="flex items-start gap-4">
           {bgUrl && (
