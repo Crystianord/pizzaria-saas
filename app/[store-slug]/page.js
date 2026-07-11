@@ -1,26 +1,8 @@
 import { createClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import { getPaleta } from '@/lib/paletas'
+import { isOpen } from '@/lib/horario'
 import MenuClient from './MenuClient'
-
-function isOpen(horario) {
-  if (!horario) return false
-  const now   = new Date()
-  const dias  = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
-  const diaKey = dias[now.getDay()]
-  const diaConf = horario[diaKey]
-  if (!diaConf?.ativo) return false
-  const [ah, am] = (diaConf.abertura  || '00:00').split(':').map(Number)
-  const [fh, fm] = (diaConf.fechamento || '23:59').split(':').map(Number)
-  const cur      = now.getHours() * 60 + now.getMinutes()
-  const abertura  = ah * 60 + am
-  const fechamento = fh * 60 + fm
-  if (fechamento < abertura) {
-    // Turno cruza meia-noite (ex: 18:00 às 02:00)
-    return cur >= abertura || cur <= fechamento
-  }
-  return cur >= abertura && cur <= fechamento
-}
 
 export default async function StorePage({ params }) {
   const { 'store-slug': storeSlug } = await params

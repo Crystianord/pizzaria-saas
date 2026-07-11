@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { updateOrderStatus } from '@/app/admin/_actions/orders'
 import Modal from '@/app/admin/_components/Modal'
 import { Bike, Store, Phone, MessageSquare, ClipboardList, Printer } from 'lucide-react'
+import { formatBR } from '@/lib/phone'
 
 const TABS = [
   { key: 'novo',       label: 'Em espera',  dot: 'bg-yellow-500' },
@@ -100,7 +101,7 @@ function ComandaPrint({ order, storeName }) {
             {order.endereco}{order.bairro ? ` - ${order.bairro}` : ''}
           </div>
         )}
-        <div style={{ fontSize: '10px', marginTop: '2px' }}>Tel: {order.cliente_tel}</div>
+        <div style={{ fontSize: '10px', marginTop: '2px' }}>Tel: {formatBR(order.cliente_tel)}</div>
         {order.observacoes && (
           <div style={{ fontSize: '10px', marginTop: '4px', borderTop: '1px dashed #000', paddingTop: '4px' }}>
             Obs: {order.observacoes}
@@ -142,7 +143,7 @@ function ModalEntregador({ open, entregadores, onConfirm, onClose }) {
               </span>
               <div>
                 <p className="font-semibold text-sm text-gray-900">{e.nome}</p>
-                <p className="text-xs text-gray-400">{e.telefone}</p>
+                <p className="text-xs text-gray-400">{formatBR(e.telefone)}</p>
               </div>
               {selected?.id === e.id && (
                 <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
@@ -262,7 +263,7 @@ function OrderCard({ order, storeSlug, storeName, entregadores, onStatusChange, 
           {order.tipo_entrega === 'entrega' && (
             <p>{order.endereco}{order.bairro ? `, ${order.bairro}` : ''}</p>
           )}
-          <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> {order.cliente_tel}</p>
+          <p className="flex items-center gap-1"><Phone className="w-3 h-3" /> {formatBR(order.cliente_tel)}</p>
           {order.observacoes && <p className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {order.observacoes}</p>}
         </div>
 

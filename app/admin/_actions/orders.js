@@ -24,9 +24,22 @@
 import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { toE164 } from '@/lib/phone'
 
 // Whitelist de status válidos — bloqueia qualquer string arbitrária vinda do cliente
 const VALID_STATUSES = ['novo', 'em_preparo', 'a_caminho', 'entregue', 'cancelado']
+
+// Mesmos limites do pedido público (app/store/_actions/orders.js). O admin é
+// confiável, mas o banco tem CHECK de tamanho — sem o clamp, um texto longo
+// derruba o insert com erro de constraint em vez de uma mensagem clara.
+const MAX_NOME     = 100
+const MAX_ENDERECO = 200
+const MAX_BAIRRO   = 60
+const MAX_OBS      = 500
+
+function clamp(str, max) {
+  return (str || '').toString().trim().slice(0, max)
+}
 
 /**
  * createOrderManual — Cria um pedido manualmente via painel admin.
@@ -67,6 +80,18 @@ export async function createOrderManual(prevState, formData) {
   const storeSlug = adminStore.stores.slug
   const tipoEntrega = formData.get('tipo_entrega')
   const taxaEntrega = parseFloat(formData.get('taxa_entrega') || '0')
+
+  const clienteNome = clamp(formData.get('cliente_nome'), MAX_NOME)
+  const endereco    = tipoEntrega === 'entrega' ? clamp(formData.get('endereco'), MAX_ENDERECO) : null
+  const bairro      = tipoEntrega === 'entrega' ? clamp(formData.get('bairro'),   MAX_BAIRRO)   : null
+  const observacoes = clamp(formData.get('observacoes'), MAX_OBS) || null
+
+  if (!clienteNome) return { error: 'Nome do cliente obrigatório.' }
+
+  // Mesmo formato do pedido público: E.164, para o telefone ser uma chave
+  // confiável entre pedido e conversa de WhatsApp.
+  const telE164 = toE164(formData.get('cliente_tel'))
+  if (!telE164) return { error: 'Telefone inválido. Use DDD + número, ex: (62) 98189-5453.' }
 
   // 3. Parsear items_json com guarda contra JSON malformado
   let items
@@ -112,15 +137,15 @@ export async function createOrderManual(prevState, formData) {
     .insert({
       store_id:     storeId,
       status:       'novo',
-      cliente_nome: formData.get('cliente_nome'),
-      cliente_tel:  formData.get('cliente_tel'),
+      cliente_nome: clienteNome,
+      cliente_tel:  telE164,
       tipo_entrega: tipoEntrega,
-      endereco:     tipoEntrega === 'entrega' ? formData.get('endereco') : null,
-      bairro:       tipoEntrega === 'entrega' ? formData.get('bairro')   : null,
+      endereco,
+      bairro,
       taxa_entrega: tipoEntrega === 'entrega' ? taxaEntrega : 0,
       subtotal,
       total,
-      observacoes:  formData.get('observacoes') || null,
+      observacoes,
     })
     .select('id')
     .single()

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { createEntregador, toggleEntregador, updateEntregador, toggleDisponivel } from '@/app/admin/_actions/entregadores'
 import Modal from '@/app/admin/_components/Modal'
 import { Bike, Phone, ClipboardList, Check, CircleCheck, Circle, Plus, Pencil } from 'lucide-react'
+import { toE164, formatBR } from '@/lib/phone'
 
 function SubmitBtn() {
   const { pending } = useFormStatus()
@@ -101,7 +102,7 @@ function EntregadorCard({ e, storeSlug, baseUrl }) {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" /> {e.telefone}</p>
+              <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" /> {formatBR(e.telefone)}</p>
             </>
           )}
         </div>
@@ -150,7 +151,7 @@ function EntregadorCard({ e, storeSlug, baseUrl }) {
             {copied ? <><Check className="w-3 h-3 inline mr-1" />Copiado!</> : <><ClipboardList className="w-3 h-3 inline mr-1" />Copiar link</>}
           </motion.button>
           <a
-            href={`https://wa.me/55${e.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${e.nome}! Aqui está seu link de acesso para ver suas entregas:\n${portalUrl}`)}`}
+            href={`https://wa.me/${toE164(e.telefone)}?text=${encodeURIComponent(`Olá ${e.nome}! Aqui está seu link de acesso para ver suas entregas:\n${portalUrl}`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 text-xs font-semibold py-2 rounded-lg text-white text-center transition-opacity hover:opacity-90"

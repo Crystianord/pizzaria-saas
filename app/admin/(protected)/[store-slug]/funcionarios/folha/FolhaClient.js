@@ -2,6 +2,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { createIntercorrencia, deleteIntercorrencia } from '@/app/admin/_actions/funcionarios'
 import { AlertTriangle, Users } from 'lucide-react'
+import { toE164 } from '@/lib/phone'
 
 function fmt(v) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -303,7 +304,7 @@ function FuncionarioPayCard({ funcionario, intercorrencias, inicio, fim }) {
         {/* WhatsApp */}
         {funcionario.telefone && (
           <a
-            href={`https://wa.me/55${funcionario.telefone.replace(/\D/g, '')}?text=${buildWhatsMsg()}`}
+            href={`https://wa.me/${toE164(funcionario.telefone)}?text=${buildWhatsMsg()}`}
             target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
             style={{ backgroundColor: '#25d366' }}

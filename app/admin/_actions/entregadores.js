@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
+import { toE164 } from '@/lib/phone'
 
 async function ctx() {
   const supabase = await createClient()
@@ -23,10 +24,13 @@ export async function createEntregador(prevState, formData) {
 
   if (!nome || !telefone) return { error: 'Nome e telefone são obrigatórios.' }
 
+  const telE164 = toE164(telefone)
+  if (!telE164) return { error: 'Telefone inválido. Use DDD + número, ex: (62) 98189-5453.' }
+
   const { error } = await supabase.from('funcionarios').insert({
     store_id:          storeId,
     nome,
-    telefone,
+    telefone:          telE164,
     cargo:             'Entregador',
     periodo_pagamento: 'semanal',
     valor_diaria:      0,
@@ -47,13 +51,17 @@ export async function createEntregador(prevState, formData) {
 export async function updateEntregador(id, nome, telefone, storeSlug) {
   const { supabase, storeId } = await ctx()
 
+  const telE164 = toE164(telefone)
+  if (!telE164) return { error: 'Telefone inválido. Use DDD + número, ex: (62) 98189-5453.' }
+
   await supabase.from('funcionarios')
-    .update({ nome: nome.trim(), telefone: telefone.trim() })
+    .update({ nome: nome.trim(), telefone: telE164 })
     .eq('id', id)
     .eq('store_id', storeId)
     .eq('faz_entrega', true)
 
   revalidatePath(`/admin/${storeSlug}/entregadores`)
+  return { success: true }
 }
 
 export async function toggleEntregador(id, ativo, storeSlug) {

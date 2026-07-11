@@ -3,6 +3,7 @@ import { useState, useTransition, useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { createFuncionario, updateFuncionario, toggleFuncionario } from '@/app/admin/_actions/funcionarios'
 import { Users, Phone } from 'lucide-react'
+import { formatBR } from '@/lib/phone'
 
 const CARGOS = ['Cozinheiro(a)', 'Auxiliar de cozinha', 'Atendente', 'Caixa', 'Garçom/Garçonete', 'Gerente', 'Pizzaiolo']
 const PERIODOS = [
@@ -102,7 +103,7 @@ function FuncionarioCard({ f, storeSlug }) {
                   <PeriodoBadge p={f.periodo_pagamento} />
                   <span className="text-xs font-semibold text-gray-700">{fmt(f.valor_diaria)}/dia</span>
                 </div>
-                {f.telefone && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Phone className="w-3 h-3" /> {f.telefone}</p>}
+                {f.telefone && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Phone className="w-3 h-3" /> {formatBR(f.telefone)}</p>}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

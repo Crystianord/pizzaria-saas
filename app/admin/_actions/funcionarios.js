@@ -31,6 +31,18 @@
 'use server'
 import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
+import { toE164 } from '@/lib/phone'
+
+// O telefone é opcional aqui, mas quando informado precisa ser válido: é por ele
+// que o entregador recebe a notificação de entrega atribuída.
+function normalizaTelefone(raw) {
+  const bruto = (raw || '').toString().trim()
+  if (!bruto) return { telefone: null }
+
+  const e164 = toE164(bruto)
+  if (!e164) return { erro: 'Telefone inválido. Use DDD + número, ex: (62) 98189-5453.' }
+  return { telefone: e164 }
+}
 
 /**
  * ctx — Helper interno: autenticação + resolução da loja.
@@ -73,11 +85,15 @@ async function ctx() {
 export async function createFuncionario(prevState, formData) {
   try {
     const { supabase, storeId, storeSlug } = await ctx()
+
+    const tel = normalizaTelefone(formData.get('telefone'))
+    if (tel.erro) return { error: tel.erro }
+
     const { error } = await supabase.from('funcionarios').insert({
       store_id:          storeId,
       nome:              formData.get('nome'),
       cargo:             formData.get('cargo')    || null,
-      telefone:          formData.get('telefone') || null,
+      telefone:          tel.telefone,
       periodo_pagamento: formData.get('periodo_pagamento') || 'semanal',
       valor_diaria:      parseFloat(formData.get('valor_diaria')) || 0,
       ativo: true,
@@ -105,11 +121,15 @@ export async function createFuncionario(prevState, formData) {
  */
 export async function updateFuncionario(id, fields, storeSlug) {
   const { supabase, storeId } = await ctx()
+
+  const tel = normalizaTelefone(fields.telefone)
+  if (tel.erro) return { error: tel.erro }
+
   await supabase.from('funcionarios')
     .update({
       nome:              fields.nome,
       cargo:             fields.cargo    || null,
-      telefone:          fields.telefone || null,
+      telefone:          tel.telefone,
       periodo_pagamento: fields.periodo_pagamento,
       valor_diaria:      parseFloat(fields.valor_diaria) || 0,
     })

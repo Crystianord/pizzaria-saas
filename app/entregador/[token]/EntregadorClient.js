@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Bike, Phone } from 'lucide-react'
+import { toE164, formatBR } from '@/lib/phone'
 import { marcarEntregue } from '@/app/entregador/_actions/orders'
 
 function fmt(v) {
@@ -121,13 +122,13 @@ export default function EntregadorClient({ entregador, initialOrders, token }) {
                 {/* Contato */}
                 <div className="flex gap-2">
                   <a
-                    href={`tel:${order.cliente_tel}`}
+                    href={`tel:+${toE164(order.cliente_tel) ?? order.cliente_tel}`}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                   >
                     <Phone className="w-4 h-4" /> Ligar
                   </a>
                   <a
-                    href={`https://wa.me/55${order.cliente_tel.replace(/\D/g, '')}`}
+                    href={`https://wa.me/${toE164(order.cliente_tel)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 active:opacity-80 transition-opacity"

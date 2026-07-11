@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
 import { Bike, BarChart2, Calendar, Moon } from 'lucide-react'
+import { toE164, formatBR } from '@/lib/phone'
 
 function fmt(v) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -107,7 +108,7 @@ function DriverPayCard({ driver, entregador, dataSelecionada, onWhatsapp }) {
           </span>
           <div>
             <p className="font-bold text-gray-900">{driver.nome}</p>
-            {entregador?.telefone && <p className="text-xs text-gray-400">{entregador.telefone}</p>}
+            {entregador?.telefone && <p className="text-xs text-gray-400">{formatBR(entregador.telefone)}</p>}
           </div>
         </div>
         <div className="text-right flex-shrink-0">
@@ -243,7 +244,7 @@ function DriverPayCard({ driver, entregador, dataSelecionada, onWhatsapp }) {
       {/* WhatsApp */}
       {entregador?.telefone && (
         <a
-          href={`https://wa.me/55${entregador.telefone.replace(/\D/g, '')}?text=${buildWhatsMsg()}`}
+          href={`https://wa.me/${toE164(entregador.telefone)}?text=${buildWhatsMsg()}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"

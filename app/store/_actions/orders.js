@@ -21,6 +21,7 @@
  */
 
 import { createServiceClient } from '@/lib/supabase-service'
+import { toE164 } from '@/lib/phone'
 
 // ─── Limites ───────────────────────────────────────────────────
 const MAX_NOME       = 100
@@ -66,6 +67,12 @@ export async function createOrder(prevState, formData) {
   if (!clienteNome)                                   return { error: 'Nome obrigatório.' }
   if (!clienteTel)                                    return { error: 'Telefone obrigatório.' }
   if (!['entrega', 'retirada'].includes(tipoEntrega)) return { error: 'Tipo de entrega inválido.' }
+
+  // Guardamos o telefone em E.164 (5562981895453). É a chave que liga o pedido
+  // à conversa de WhatsApp — sem um formato único, o mesmo cliente vira vários.
+  const telE164 = toE164(clienteTel)
+  if (!telE164) return { error: 'Telefone inválido. Use DDD + número, ex: (62) 98189-5453.' }
+
   if (tipoEntrega === 'entrega' && (!endereco || !bairro)) {
     return { error: 'Endereço e bairro obrigatórios para entrega.' }
   }
@@ -229,7 +236,7 @@ export async function createOrder(prevState, formData) {
       store_id:     storeId,
       status:       'novo',
       cliente_nome: clienteNome,
-      cliente_tel:  clienteTel,
+      cliente_tel:  telE164,
       tipo_entrega: tipoEntrega,
       endereco,
       bairro,
