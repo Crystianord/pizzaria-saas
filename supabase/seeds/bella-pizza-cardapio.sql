@@ -26,7 +26,17 @@ BEGIN
     RAISE EXCEPTION 'Loja bella-pizza não encontrada';
   END IF;
 
-  -- Limpa o catálogo anterior (pedidos ficam intactos)
+  -- Solta a referência dos pedidos antigos ao catálogo que vamos apagar.
+  --
+  -- order_items guarda uma CÓPIA de nome_produto, nome_variante e preco_unitario
+  -- no momento da compra — o product_id/variant_id é só um ponteiro. Zerando o
+  -- ponteiro, o histórico de pedidos continua íntegro e legível, e a FK deixa de
+  -- bloquear o DELETE do catálogo.
+  UPDATE order_items
+     SET product_id = NULL, variant_id = NULL
+   WHERE store_id = v_store;
+
+  -- Limpa o catálogo anterior (os pedidos em si ficam intactos)
   DELETE FROM product_option_groups WHERE store_id = v_store;
   DELETE FROM option_items          WHERE store_id = v_store;
   DELETE FROM option_groups         WHERE store_id = v_store;
